@@ -1,12 +1,19 @@
 services:
   db:
     image: mysql:8.0
+    ports:
+      - "3306:3306"
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     volumes:
       - db_data:/var/lib/mysql
 
@@ -19,7 +26,8 @@ services:
       PCO_APP_ID: ${PCO_APP_ID}
       PCO_SECRET: ${PCO_SECRET}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   tunnel:
     image: cloudflare/cloudflared:latest

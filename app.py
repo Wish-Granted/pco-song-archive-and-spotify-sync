@@ -4,6 +4,7 @@ import sys
 from PlanItemPayload import PlanItemPayload
 from pco_service import get_plan_details
 from models import db, Plan, PlanSong
+import time
 
 app = Flask(__name__)
 
@@ -14,7 +15,19 @@ db.init_app(app)
 
 #Create tables if they don't exist
 with app.app_context():
-    db.create_all()
+    retries = 5
+    while retries > 0:
+        try:
+            db.create_all()
+            print("Successfully connected to the database!", file=sys.stderr)
+            break
+        except OperationalError:
+            retries -= 1
+            print(f"Database not ready. Retrying in 5 seconds... ({retries} attempts left)", file=sys.stderr)
+            time.sleep(5)
+    else:
+        print("Could not connect to the database. Exiting.", file=sys.stderr)
+        sys.exit(1)
 
 @app.route("/", methods=["GET","POST"])
 def webhook():
@@ -79,7 +92,16 @@ def webhook():
         
         return jsonify({"status": "success"}), 200
     
-    return render_template("index.html")
+    #GET
+    today = datetime.now()
+    seven_days_later = today + timedelta(days=7)
+    
+    upcoming_plans = Plan.query.filter(
+        Plan.plan_date >= today,
+        Plan.plan_date <= seven_days_later
+    ).order_by(Plan.plan_date.asc()).all()
+    
+    return render_template("index.html", plans=upcoming_plans)
     
 if __name__ == "__main__":
     # 0.0.0.0 - accessible inside the docker network
