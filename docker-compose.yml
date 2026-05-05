@@ -1,0 +1,32 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+
+  flask-app:
+    build: .
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: 1
+      DATABASE_URL: ${DATABASE_URL}
+      PCO_APP_ID: ${PCO_APP_ID}
+      PCO_SECRET: ${PCO_SECRET}
+    depends_on:
+      - db
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - flask-app
+
+volumes:
+  db_data:
