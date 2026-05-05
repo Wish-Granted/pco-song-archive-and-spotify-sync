@@ -11,13 +11,13 @@ def get_plan_details(url):
     if response.status_code == 200:
         plan_data = response.json()['data']
 
+        raw_date = plan_data['attributes'].get('sort_date')
+        plan_date = raw_date.replace('Z', '').replace('T', ' ')
+
         plan_title = plan_data['attributes'].get('title')
         series_title = plan_data['attributes'].get('series_title')
 
-        display_name = plan_title or series_title or "Untitled Plan"
-
-        raw_date = plan_data['attributes'].get('sort_date')
-        plan_date = raw_date.replace('Z', '').replace('T', ' ')
+        display_name = plan_title or series_title or plan_date
 
         return {"success": True, "plan_title": display_name, "plan_date": plan_date}
 

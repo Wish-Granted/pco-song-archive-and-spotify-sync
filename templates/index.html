@@ -3,20 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wish Granted's Webhook</title>
+    <title>Service Schedule</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
-        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        h1 { color: #2d3436; }
-        p { color: #636e72; }
-        .status { color: #00b894; font-weight: bold; }
+        body { font-family: sans-serif; background-color: #f4f4f9; padding: 2rem; color: #2d3436; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .plan-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        h1 { text-align: center; }
+        h2 { border-bottom: 2px solid #00b894; padding-bottom: 0.5rem; margin-top: 0; }
+        .song-list { list-style: none; padding: 0; }
+        .song-item { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+        .song-pos { font-weight: bold; color: #636e72; margin-right: 1rem; }
+        .song-key { color: #00b894; font-weight: bold; }
+        .no-plans { text-align: center; color: #636e72; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>Hello!</h1>
-        <p>The webhook server is <span class="status">Online</span></p>
-        <p>Send POST requests to this URL to trigger actions.</p>
+    <div class="container">
+        <h1>Upcoming Services</h1>
+        
+        {% if plans %}
+            {% for plan in plans %}
+                <div class="plan-card">
+                    {% set formatted_date = plan.plan_date.strftime('%A, %B %d, %Y at %I:%M %p') if plan.plan_date else "No Date Set" %}
+                    
+                    <h2>
+                    {% if plan.plan_name == plan.plan_date|string or plan.plan_name == formatted_date %}
+                        {{ formatted_date }}
+                    {% else %}
+                        {{ plan.plan_name }}
+                    {% endif %}
+                    </h2>
+
+                    {% if plan.plan_name != formatted_date and plan.plan_name != plan.plan_date|string %}
+                        <p><strong>Date:</strong> {{ formatted_date }}</p>
+                    {% endif %}
+                    
+                    <ul class="song-list">
+                        {% for song in plan.songs | sort(attribute='position') %}
+                            <li class="song-item">
+                                <span>
+                                    <span class="song-pos">{{ song.position }}.</span>
+                                    {{ song.song_title }}
+                                </span>
+                                <span class="song-key">{{ song.song_key }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="plan-card no-plans">
+                <p>No services scheduled for the next 7 days.</p>
+            </div>
+        {% endif %}
     </div>
 </body>
 </html>

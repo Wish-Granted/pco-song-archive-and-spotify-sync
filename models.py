@@ -9,6 +9,9 @@ class Plan(db.Model):
     plan_name = db.Column(db.String(100), nullable=True)
     plan_date = db.Column(db.DateTime, nullable=True)
 
+	#links songs to this plan for 'plan.songs' in the HTML
+    songs = db.relationship('PlanSong', backref='plan', lazy=True, cascade="all, delete-orphan")
+
 class PlanSong(db.Model):
     __tablename__ = 'plan_songs'
     
