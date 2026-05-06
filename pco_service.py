@@ -13,11 +13,20 @@ def get_plan_details(url):
 
         raw_date = plan_data['attributes'].get('sort_date')
         plan_date = raw_date.replace('Z', '').replace('T', ' ')
+        
+        date_object = datetime.fromisoformat(raw_date.replace('Z', '+00:00'))
+        is_sunday = date_object.weekday() == 6
+        time_str = date_object.strftime('%H:%M')
+        backup_title = None
+        if is_sunday and time_str == "10:15":
+            backup_title = "Contemporary Service"
+        elif is_sunday and time_str == "18:00":
+            backup_title = "Sunday Night"
 
         plan_title = plan_data['attributes'].get('title')
         series_title = plan_data['attributes'].get('series_title')
 
-        display_name = plan_title or series_title or plan_date
+        display_name = plan_title or series_title or backup_title or plan_date
 
         return {"success": True, "plan_title": display_name, "plan_date": plan_date}
 

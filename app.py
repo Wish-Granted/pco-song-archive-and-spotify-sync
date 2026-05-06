@@ -31,7 +31,7 @@ with app.app_context():
         print("Could not connect to the database. Exiting.", file=sys.stderr)
         sys.exit(1)
 
-@app.route("/", methods=["GET","POST"])
+@app.route("/bibcservicesongs", methods=["GET","POST"])
 def webhook():
     if request.method == "POST":
         payload = request.json
@@ -39,16 +39,25 @@ def webhook():
         if not payload:
             return jsonify({"error": "No payload"}), 400
         
-        #print(f"\n\nReceived webhook: {payload}", file=sys.stderr)
+        print(f"\n\nReceived webhook: {payload}", file=sys.stderr)
         
-        plan_item_payload = PlanItemPayload(payload)    
+        plan_item_payload = PlanItemPayload(payload) 
+
         if plan_item_payload.check_payload() == False:
-             return jsonify({"error": "Bad payload"}), 400
-             
+            return jsonify({"error": "Bad payload"}), 400
+
         action = plan_item_payload.get_action()
         is_song = plan_item_payload.check_if_song()
-
         plan_id = plan_item_payload.get_plan_id()
+        
+        if not is_song and action == "destroyed":
+            #if a plan was deleted
+            PlanSong.query.filter_by(plan_id=plan_id).delete()
+            Plan.query.filter_by(plan_id=plan_id).delete()
+            db.session.commit()
+            print(f"\nRemoved Plan {plan_id}\n", file=sys.stderr)
+            return jsonify({"status": "success"}), 200
+
         
         #check if plan is in database, add if not
         plan = Plan.query.filter_by(plan_id=plan_id).first()
@@ -91,7 +100,7 @@ def webhook():
             PlanSong.query.filter_by(plan_id=plan_id, song_id=song_id).delete()
             db.session.commit()
             print(f"\nRemoved Song {song_id} from Plan {plan_id}\n", file=sys.stderr)
-        
+                
         return jsonify({"status": "success"}), 200
     
     #GET

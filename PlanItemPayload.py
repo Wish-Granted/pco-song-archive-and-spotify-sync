@@ -20,12 +20,15 @@ class PlanItemPayload:
 
 		if "services.v2.events.plan_item" not in action:
 			is_planning_center_plan_item_payload = False
+		if "services.v2.events.plan.destroyed" == action:
+			is_planning_center_plan_item_payload = True
 			
 		return is_planning_center_plan_item_payload
 
 	def get_action(self):
 		action = self.payload_outer["data"][0]["attributes"]["name"]
 		action = action.replace("services.v2.events.plan_item.", "")
+		action = action.replace("services.v2.events.plan.", "")
 		return action
 
 	def get_time_of_action(self):
@@ -39,10 +42,13 @@ class PlanItemPayload:
 		return event_time_aest
 
 	def check_if_song(self):
-		if self.payload_inner["data"]["relationships"]["song"]["data"] is None:
+		try:
+			if self.payload_inner["data"]["relationships"]["song"]["data"] is None:
+				is_song = False
+			else:
+				is_song = True
+		except (AttributeError, KeyError):
 			is_song = False
-		else:
-			is_song = True
 		return is_song
 
 	def get_song_id(self):
@@ -62,7 +68,10 @@ class PlanItemPayload:
 		return self.payload_inner["data"]["attributes"]["sequence"]
 	
 	def get_plan_id(self):
-		return self.payload_inner["data"]["relationships"]["plan"]["data"]["id"]
+		if self.check_if_song():
+			return self.payload_inner["data"]["relationships"]["plan"]["data"]["id"]
+		else:
+			return self.payload_inner["data"]["id"]
 		
 	def get_plan_url(self):
 		url = self.payload_inner["data"]["links"]["self"]

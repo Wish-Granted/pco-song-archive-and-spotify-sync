@@ -24,7 +24,7 @@
         {% if plans %}
             {% for plan in plans %}
                 <div class="plan-card">
-                    {% set formatted_date = plan.plan_date.strftime('%A, %B %d, %Y at %I:%M %p') if plan.plan_date else "No Date Set" %}
+                    {% set formatted_date = plan.plan_date.strftime('%A, %B %d at %I:%M %p') if plan.plan_date else "No Date Set" %}
                     
                     <h2>
                     {% if plan.plan_name == plan.plan_date|string or plan.plan_name == formatted_date %}
@@ -35,7 +35,7 @@
                     </h2>
 
                     {% if plan.plan_name != formatted_date and plan.plan_name != plan.plan_date|string %}
-                        <p><strong>Date:</strong> {{ formatted_date }}</p>
+                        <p>{{ formatted_date }}</p>
                     {% endif %}
                     
                     <ul class="song-list">
