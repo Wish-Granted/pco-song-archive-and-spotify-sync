@@ -39,7 +39,7 @@ def webhook():
         if not payload:
             return jsonify({"error": "No payload"}), 400
         
-        print(f"\n\nReceived webhook: {payload}", file=sys.stderr)
+        #print(f"\n\nReceived webhook: {payload}", file=sys.stderr)
         
         plan_item_payload = PlanItemPayload(payload) 
 
@@ -48,32 +48,40 @@ def webhook():
 
         action = plan_item_payload.get_action()
         is_song = plan_item_payload.check_if_song()
-        plan_id = plan_item_payload.get_plan_id()
+        plan_pco_id = plan_item_payload.get_plan_id()
         
         if not is_song and action == "destroyed":
             #if a plan was deleted
-            PlanSong.query.filter_by(plan_id=plan_id).delete()
-            Plan.query.filter_by(plan_id=plan_id).delete()
+            PlanSong.query.filter_by(plan_pco_id=plan_pco_id).delete()
+            Plan.query.filter_by(plan_pco_id=plan_pco_id).delete()
             db.session.commit()
-            print(f"\nRemoved Plan {plan_id}\n", file=sys.stderr)
+            print(f"\nRemoved Plan {plan_pco_id}\n", file=sys.stderr)
             return jsonify({"status": "success"}), 200
 
         
         #check if plan is in database, add if not
-        plan = Plan.query.filter_by(plan_id=plan_id).first()
+        plan = Plan.query.filter_by(plan_pco_id=plan_pco_id).first()
         if not plan:
             plan_details = get_plan_details(plan_item_payload.get_plan_url())
-            plan = Plan(plan_id=plan_id, plan_name=plan_details["plan_title"], plan_date=plan_details["plan_date"])
-            db.session.add(plan)
-            db.session.commit()
+            try:
+                plan = Plan(plan_pco_id=plan_pco_id, plan_name=plan_details["plan_title"], plan_date=plan_details["plan_date"])
+            
+                db.session.add(plan)
+                try:
+                    db.session.commit()
+                except IntegrityError:
+                    print(f"Failed to create plan {plan_pco_id} details perhaaps it was already created, continuing")
+            except KeyError:
+                print(f"Failed to get plan {plan_pco_id} details perhaaps it was deleted")
+                return jsonify({"status": "success"}), 200
         
         if is_song and action in ["created", "updated"]:
-            song_id = plan_item_payload.get_song_id()
+            song_pco_id = plan_item_payload.get_song_id()
             song_details = plan_item_payload.get_song_details()
             position_in_plan = plan_item_payload.get_position_in_plan()
             
             #check if song is already in plan
-            plan_song = PlanSong.query.filter_by(plan_id=plan_id, song_id=song_id).first()
+            plan_song = PlanSong.query.filter_by(plan_pco_id=plan_pco_id, song_pco_id=song_pco_id).first()
             
             if plan_song:
                 #if yes update song details/ position
@@ -83,8 +91,8 @@ def webhook():
             else:
                 #else create new entry
                 new_plan_song = PlanSong(
-                    plan_id=plan_id,
-                    song_id=song_id,
+                    plan_pco_id=plan_pco_id,
+                    song_pco_id=song_pco_id,
                     song_title=song_details.get("song_title"),
                     song_key=song_details.get("song_key"),
                     position=position_in_plan
@@ -96,10 +104,10 @@ def webhook():
         
         elif is_song and action == "destroyed":
             # if song was removed from plan delete from database
-            song_id = plan_item_payload.get_song_id()
-            PlanSong.query.filter_by(plan_id=plan_id, song_id=song_id).delete()
+            song_pco_id = plan_item_payload.get_song_id()
+            PlanSong.query.filter_by(plan_pco_id=plan_pco_id, song_pco_id=song_pco_id).delete()
             db.session.commit()
-            print(f"\nRemoved Song {song_id} from Plan {plan_id}\n", file=sys.stderr)
+            print(f"\nRemoved Song {song_pco_id} from Plan {plan_pco_id}\n", file=sys.stderr)
                 
         return jsonify({"status": "success"}), 200
     
