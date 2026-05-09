@@ -3,10 +3,11 @@ import sys
 import time
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, IntegrityError
 from PlanItemPayload import PlanItemPayload
 from pco_service import get_plan_details
 from models import db, Plan, PlanSong
+from spotify_handler import sync_plan_to_spotify
 
 app = Flask(__name__)
 
@@ -38,15 +39,18 @@ def webhook():
         
         if not payload:
             return jsonify({"error": "No payload"}), 400
-        
-        #print(f"\n\nReceived webhook: {payload}", file=sys.stderr)
-        
+                
         plan_item_payload = PlanItemPayload(payload) 
 
         if plan_item_payload.check_payload() == False:
             return jsonify({"error": "Bad payload"}), 400
 
         action = plan_item_payload.get_action()
+        attempt = plan_item_payload.get_attempt()
+        time_of_action = plan_item_payload.get_time_of_action()
+        
+        print(f"new post {time_of_action}: action={action} | attempt={attempt}")
+        
         is_song = plan_item_payload.check_if_song()
         plan_pco_id = plan_item_payload.get_plan_id()
         
@@ -70,7 +74,8 @@ def webhook():
                 try:
                     db.session.commit()
                 except IntegrityError:
-                    print(f"Failed to create plan {plan_pco_id} details perhaaps it was already created, continuing")
+                    db.session.rollback()
+                    print(f"Failed to create plan {plan_pco_id} details perhaps it was already created, this often happens when a plan order before the plan has been added to the db, continuing")
             except KeyError:
                 print(f"Failed to get plan {plan_pco_id} details perhaaps it was deleted")
                 return jsonify({"status": "success"}), 200
@@ -108,6 +113,8 @@ def webhook():
             PlanSong.query.filter_by(plan_pco_id=plan_pco_id, song_pco_id=song_pco_id).delete()
             db.session.commit()
             print(f"\nRemoved Song {song_pco_id} from Plan {plan_pco_id}\n", file=sys.stderr)
+              
+        sync_plan_to_spotify(plan)
                 
         return jsonify({"status": "success"}), 200
     

@@ -30,7 +30,11 @@ class PlanItemPayload:
 		action = action.replace("services.v2.events.plan_item.", "")
 		action = action.replace("services.v2.events.plan.", "")
 		return action
-
+	
+	def get_attempt(self):
+		attempt =self.payload_outer["data"][0]["attributes"]["attempt"]
+		return attempt
+	
 	def get_time_of_action(self):
 		if self.get_action() == "destroyed":
 			return "n/a"
