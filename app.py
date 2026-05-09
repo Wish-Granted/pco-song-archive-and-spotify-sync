@@ -8,6 +8,7 @@ from PlanItemPayload import PlanItemPayload
 from pco_service import get_plan_details
 from models import db, Plan, PlanSong
 from spotify_handler import sync_plan_to_spotify
+import threading
 
 app = Flask(__name__)
 
@@ -114,8 +115,17 @@ def webhook():
             db.session.commit()
             print(f"\nRemoved Song {song_pco_id} from Plan {plan_pco_id}\n", file=sys.stderr)
               
-        sync_plan_to_spotify(plan)
-                
+        def run_sync():
+            with app.app_context():
+                from models import Plan
+                fresh_plan = db.session.get(Plan, plan_pco_id)
+                if fresh_plan:
+                    sync_plan_to_spotify(fresh_plan)
+
+        thread = threading.Thread(target=run_sync)
+        thread.daemon = True
+        thread.start()
+        
         return jsonify({"status": "success"}), 200
     
     #GET

@@ -39,7 +39,7 @@ def search_track(sp, song_title):
     """Search Spotify for a track. Returns spotify track ID or None."""
     results = sp.search(q=song_title, type="track", limit=5)
     tracks = results["tracks"]["items"]
-    return tracks[0]["id"]
+    return tracks[0]["id"] if tracks else None
     
 
 def find_existing_playlist(sp, name):

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Service Schedule</title>
+    <title>BIBC Service Songs</title>
     <style>
         body { font-family: sans-serif; background-color: #f4f4f9; padding: 2rem; color: #2d3436; }
         .container { max-width: 800px; margin: 0 auto; }
@@ -38,17 +38,30 @@
                         <p>{{ formatted_date }}</p>
                     {% endif %}
                     
-                    <ul class="song-list">
-                        {% for song in plan.songs | sort(attribute='position') %}
-                            <li class="song-item">
-                                <span>
-                                    <span class="song-pos">{{ song.position }}.</span>
-                                    {{ song.song_title }}
-                                </span>
-                                <span class="song-key">{{ song.song_key }}</span>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                    {% if plan.plan_spotify_id %}
+                        <iframe
+                            src="https://open.spotify.com/embed/playlist/{{ plan.plan_spotify_id }}?utm_source=generator&theme=0"
+                            width="100%"
+                            height="{{ [plan.songs|length * 56 + 180, 380]|max }}"
+                            frameborder="0"
+                            allowfullscreen=""
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                            loading="lazy">
+                        </iframe>
+                    {% else %}
+                        <ul class="song-list">
+                            {% for song in plan.songs | sort(attribute='position') %}
+                                <li class="song-item">
+                                    <span>
+                                        <span class="song-pos">{{ song.position }}.</span>
+                                        {{ song.song_title }}
+                                    </span>
+                                    <span class="song-key">{{ song.song_key }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                
                 </div>
             {% endfor %}
         {% else %}
