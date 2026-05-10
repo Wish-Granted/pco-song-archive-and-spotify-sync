@@ -78,8 +78,20 @@ def webhook():
                     db.session.rollback()
                     print(f"Failed to create plan {plan_pco_id} details perhaps it was already created, this often happens when a plan order before the plan has been added to the db, continuing")
             except KeyError:
-                print(f"Failed to get plan {plan_pco_id} details perhaaps it was deleted")
-                return jsonify({"status": "success"}), 200
+                plan_details = get_plan_details(plan_item_payload.get_plan_url(), test_pco=True)
+                try:
+                    plan = Plan(plan_pco_id=plan_pco_id, plan_name=plan_details["plan_title"], plan_date=plan_details["plan_date"])
+                
+                    db.session.add(plan)
+                    try:
+                        db.session.commit()
+                        print("Test plan used")
+                    except IntegrityError:
+                        db.session.rollback()
+                        print(f"Failed to create plan {plan_pco_id} details perhaps it was already created, this often happens when a plan order before the plan has been added to the db, continuing")
+                except KeyError:
+                    print(f"Failed to get plan {plan_pco_id} details perhaaps it was deleted")
+                    return jsonify({"status": "success"}), 200
         
         if is_song and action in ["created", "updated"]:
             song_pco_id = plan_item_payload.get_song_id()

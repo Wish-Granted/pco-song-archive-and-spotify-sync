@@ -5,9 +5,15 @@ from datetime import datetime
 PCO_APP_ID = os.getenv('PCO_APP_ID')
 PCO_SECRET = os.getenv('PCO_SECRET')
 
-def get_plan_details(url):
+TEST_PCO_APP_ID = os.getenv('TEST_PCO_APP_ID')
+TEST_PCO_SECRET = os.getenv('TEST_PCO_SECRET')
+
+def get_plan_details(url, test_pco=False):
     """gets plan name and date from planning center"""
-    response = requests.get(url, auth=(PCO_APP_ID, PCO_SECRET))
+    if not test_pco:
+        response = requests.get(url, auth=(PCO_APP_ID, PCO_SECRET))
+    else:
+        response = requests.get(url, auth=(TEST_PCO_APP_ID, TEST_PCO_SECRET))
     if response.status_code == 200:
         plan_data = response.json()['data']
 
