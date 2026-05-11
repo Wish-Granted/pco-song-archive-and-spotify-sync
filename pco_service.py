@@ -28,6 +28,8 @@ def get_plan_details(url, test_pco=False):
             backup_title = "Contemporary Service"
         elif is_sunday and time_str == "18:00":
             backup_title = "Sunday Night"
+        elif time_str == "06:07":
+            backup_title = "Example Service"
 
         plan_title = plan_data['attributes'].get('title')
         series_title = plan_data['attributes'].get('series_title')

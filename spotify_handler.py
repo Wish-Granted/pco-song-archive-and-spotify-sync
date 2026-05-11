@@ -63,14 +63,21 @@ def build_playlist_tracks(sp, songs, plan):
     Updates song_spotify_id on the model objects (caller commits).
     Returns list of track IDs (skipping unresolved songs).
     """
-    from models import db  # avoid circular import
+    from models import db, PlanSong
 
     track_ids = []
     for song in sorted(songs, key=lambda s: s.position):
         if not song.song_spotify_id:
-            found_id = search_track(sp, song.song_title)
-            if found_id:
-                song.song_spotify_id = found_id
+            existing = PlanSong.query.filter(
+                PlanSong.song_title == song.song_title,
+                PlanSong.song_spotify_id.isnot(None)
+            ).first()
+            if existing:
+                song.song_spotify_id = existing.song_spotify_id
+            else:
+                found_id = search_track(sp, song.song_title)
+                if found_id:
+                    song.song_spotify_id = found_id
         if song.song_spotify_id:
             track_ids.append(f"spotify:track:{song.song_spotify_id}")
     return track_ids
