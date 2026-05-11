@@ -147,10 +147,30 @@ def webhook():
     upcoming_plans = Plan.query.filter(
         Plan.plan_date >= today,
         Plan.plan_date <= seven_days_later
-    ).order_by(Plan.plan_date.asc()).all()
+    ).filter(Plan.songs.any()).order_by(Plan.plan_date.asc()).all()
     
     return render_template("index.html", plans=upcoming_plans)
-    
+
+@app.route("/bibcservicesongs/refresh", methods=["GET"])
+def refresh():
+    plan_ids = [p.plan_pco_id for p in Plan.query.all()]
+
+    if not plan_ids:
+        return jsonify({"status": "no plans to sync"}), 200
+
+    def run_sync_all():
+        with app.app_context():
+            for plan_id in plan_ids:
+                fresh_plan = db.session.get(Plan, plan_id)
+                if fresh_plan:
+                    sync_plan_to_spotify(fresh_plan)
+
+    thread = threading.Thread(target=run_sync_all)
+    thread.daemon = True
+    thread.start()
+
+    return jsonify({"status": "sync started", "plan_count": len(plan_ids)}), 200
+
 if __name__ == "__main__":
     # 0.0.0.0 - accessible inside the docker network
     app.run(host="0.0.0.0", port=5000)
