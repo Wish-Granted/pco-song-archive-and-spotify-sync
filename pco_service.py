@@ -16,7 +16,7 @@ def get_plan_details(url, test_pco=False):
         response = requests.get(url, auth=(TEST_PCO_APP_ID, TEST_PCO_SECRET))
     if response.status_code == 200:
         plan_data = response.json()['data']
-
+                
         raw_date = plan_data['attributes'].get('sort_date')
         plan_date = raw_date.replace('Z', '').replace('T', ' ')
         
@@ -26,16 +26,18 @@ def get_plan_details(url, test_pco=False):
         backup_title = None
         if is_sunday and time_str == "10:15":
             backup_title = "Contemporary Service"
-        elif is_sunday and time_str == "18:00":
+        elif is_sunday and (time_str == "17:00" or time_str == "18:00"): #sunday night is 5pm in plannign center?
             backup_title = "Sunday Night"
+        elif is_sunday and time_str == "08:30":
+            backup_title = "Traditional Service"
         elif time_str == "06:07":
             backup_title = "Example Service"
 
         plan_title = plan_data['attributes'].get('title')
         series_title = plan_data['attributes'].get('series_title')
-
-        display_name = plan_title or series_title or backup_title or plan_date
-
-        return {"success": True, "plan_title": display_name, "plan_date": plan_date}
+        
+        #print(f"plan title: {plan_title}, series title: {series_title}, backup title: {backup_title} -------------")
+                
+        return {"success": True, "plan_title": plan_title, "plan_date": plan_date, "plan_series_name": series_title, "plan_backup_title": backup_title}
 
     return {"success": False, "error": response.text}

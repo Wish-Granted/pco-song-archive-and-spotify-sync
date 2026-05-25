@@ -8,6 +8,8 @@ class Plan(db.Model):
     plan_pco_id = db.Column(db.String(50), primary_key=True)
     plan_name = db.Column(db.String(100), nullable=True)
     plan_date = db.Column(db.DateTime, nullable=True)
+    plan_series_name = db.Column(db.String(100), nullable=True)
+    plan_backup_name = db.Column(db.String(100), nullable=True)
     plan_spotify_id = db.Column(db.String(50), nullable=True)
 
 	#links songs to this plan for 'plan.songs' in the HTML

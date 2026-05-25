@@ -32,10 +32,10 @@
                     
                     <div class="plan-header">
                         <h2>
-                        {% if plan.plan_name == plan.plan_date|string or plan.plan_name == formatted_date %}
+                        {% if not plan.plan_backup_name %}
                             {{ formatted_date }}
                         {% else %}
-                            {{ plan.plan_name }}
+                            {{ plan.plan_backup_name }}
                         {% endif %}
                         </h2>
                         {% if plan.plan_spotify_id %}
@@ -46,7 +46,7 @@
                         {% endif %}
                     </div>
 
-                    {% if plan.plan_name != formatted_date and plan.plan_name != plan.plan_date|string %}
+                    {% if plan.plan_backup_name %}
                         <p>{{ formatted_date }}</p>
                     {% endif %}
                     

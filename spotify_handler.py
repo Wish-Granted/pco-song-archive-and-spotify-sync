@@ -3,6 +3,7 @@ from spotipy.oauth2 import SpotifyOAuth
 from datetime import datetime, timedelta
 import os
 import base64
+from requests import exceptions
 
 def set_playlist_cover(sp, playlist_id, image_path="bibc_logo.png"):
     with open(image_path, "rb") as image_file:
@@ -10,7 +11,10 @@ def set_playlist_cover(sp, playlist_id, image_path="bibc_logo.png"):
         encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
         
     # Upload to Spotify
-    sp.playlist_upload_cover_image(playlist_id, encoded_string)
+    try:
+        sp.playlist_upload_cover_image(playlist_id, encoded_string)
+    except exceptions.ReadTimeout:
+        print("Failed to upload cover image")
 
 
 scope = "playlist-modify-public playlist-modify-private ugc-image-upload playlist-read-private"
@@ -49,7 +53,7 @@ def find_existing_playlist(sp, name):
     while True:
         response = sp.current_user_playlists(limit=50, offset=offset)
         for playlist in response["items"]:
-            if playlist["name"].lower() == name.lower() or playlist["name"].lower() == "BIBC "+name.lower():
+            if playlist["name"].lower() == name.lower() or playlist["name"].lower() == "bibc "+name.lower():
                 return playlist["id"]
         if response["next"]:
             offset += 50
@@ -89,6 +93,15 @@ def _set_playlist_tracks(sp, playlist_id, track_uris):
         return
     sp.playlist_replace_items(playlist_id, track_uris)
 
+def delete_playlist(playlist_id):
+    try:
+        sp = get_spotify_client()
+    except Exception as e:
+        print(f"Spotify auth failed: {e}")
+        return
+    sp.current_user_unfollow_playlist(playlist_id)
+    print(f"removed playlist {playlist_id} from account")
+
 def sync_plan_to_spotify(plan):
     """
     Main entry point. Call this after DB is updated for a plan.
@@ -110,8 +123,8 @@ def sync_plan_to_spotify(plan):
         return
 
     user_id = os.getenv("SPOTIFY_USER_ID")
-    playlist_name = plan.plan_name or str(plan.plan_date)
-    description = f"Songs for {plan.plan_date.strftime('%A %d %B %Y') if plan.plan_date else ''}"
+    playlist_name = plan.plan_backup_name or str(plan.strftime('%A, %B %d at %I:%M %p'))
+    description = f"Songs for {plan.plan_date.strftime('%A, %B %d at %I:%M %p') if plan.plan_date else ''} {plan.plan_pco_id}"
 
     #Find or create the playlist
     if not plan.plan_spotify_id:

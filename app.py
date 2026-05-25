@@ -7,7 +7,7 @@ from sqlalchemy.exc import OperationalError, IntegrityError
 from PlanItemPayload import PlanItemPayload
 from pco_service import get_plan_details
 from models import db, Plan, PlanSong
-from spotify_handler import sync_plan_to_spotify
+from spotify_handler import sync_plan_to_spotify, delete_playlist
 import threading
 
 app = Flask(__name__)
@@ -49,14 +49,17 @@ def webhook():
         action = plan_item_payload.get_action()
         attempt = plan_item_payload.get_attempt()
         time_of_action = plan_item_payload.get_time_of_action()
-        
-        print(f"new post {time_of_action}: action={action} | attempt={attempt}")
-        
+                
         is_song = plan_item_payload.check_if_song()
         plan_pco_id = plan_item_payload.get_plan_id()
         
+        print(f"new post {time_of_action}: action={action} | is song={is_song} | planid={plan_pco_id} | attempt={attempt}")
+        
         if not is_song and action == "destroyed":
             #if a plan was deleted
+            plan_to_destroy = Plan.query.filter_by(plan_pco_id=plan_pco_id).first()
+            if plan_to_destroy:
+                delete_playlist(plan_to_destroy.plan_spotify_id)
             PlanSong.query.filter_by(plan_pco_id=plan_pco_id).delete()
             Plan.query.filter_by(plan_pco_id=plan_pco_id).delete()
             db.session.commit()
@@ -65,27 +68,30 @@ def webhook():
 
         
         #check if plan is in database, add if not
+        
         plan = Plan.query.filter_by(plan_pco_id=plan_pco_id).first()
-        if not plan:
+        if not plan and is_song:
             plan_details = get_plan_details(plan_item_payload.get_plan_url())
             try:
-                plan = Plan(plan_pco_id=plan_pco_id, plan_name=plan_details["plan_title"], plan_date=plan_details["plan_date"])
-            
+                plan = Plan(plan_pco_id=plan_pco_id, plan_name=plan_details["plan_title"], plan_date=plan_details["plan_date"], plan_series_name=plan_details["plan_series_name"], plan_backup_name=plan_details["plan_backup_title"])
+
                 db.session.add(plan)
                 try:
                     db.session.commit()
+                    print(f"added plan {plan_pco_id}")
                 except IntegrityError:
                     db.session.rollback()
                     print(f"Failed to create plan {plan_pco_id} details perhaps it was already created, this often happens when a plan order before the plan has been added to the db, continuing")
             except KeyError:
+                print("trying test plan")
                 plan_details = get_plan_details(plan_item_payload.get_plan_url(), test_pco=True)
                 try:
-                    plan = Plan(plan_pco_id=plan_pco_id, plan_name=plan_details["plan_title"], plan_date=plan_details["plan_date"])
+                    plan = Plan(plan_pco_id=plan_pco_id, plan_name=plan_details["plan_title"], plan_date=plan_details["plan_date"], plan_series_name=plan_details["plan_series_name"], plan_backup_name=plan_details["plan_backup_title"])
                 
                     db.session.add(plan)
+                    print(f"added test plan {plan_pco_id}")
                     try:
                         db.session.commit()
-                        print("Test plan used")
                     except IntegrityError:
                         db.session.rollback()
                         print(f"Failed to create plan {plan_pco_id} details perhaps it was already created, this often happens when a plan order before the plan has been added to the db, continuing")
@@ -126,17 +132,18 @@ def webhook():
             PlanSong.query.filter_by(plan_pco_id=plan_pco_id, song_pco_id=song_pco_id).delete()
             db.session.commit()
             print(f"\nRemoved Song {song_pco_id} from Plan {plan_pco_id}\n", file=sys.stderr)
-              
-        def run_sync():
-            with app.app_context():
-                from models import Plan
-                fresh_plan = db.session.get(Plan, plan_pco_id)
-                if fresh_plan:
-                    sync_plan_to_spotify(fresh_plan)
+        
+        if is_song:
+            def run_sync():
+                with app.app_context():
+                    from models import Plan
+                    fresh_plan = db.session.get(Plan, plan_pco_id)
+                    if fresh_plan:
+                        sync_plan_to_spotify(fresh_plan)
 
-        thread = threading.Thread(target=run_sync)
-        thread.daemon = True
-        thread.start()
+            thread = threading.Thread(target=run_sync)
+            thread.daemon = True
+            thread.start()
         
         return jsonify({"status": "success"}), 200
     
